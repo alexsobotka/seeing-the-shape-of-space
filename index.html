@@ -366,7 +366,7 @@ const MESH={};
     out.push({P:[fn(ua,va),fn(ub,va),fn(ub,vb),fn(ua,vb)],N:nf((ua+ub)/2,(va+vb)/2)})}return out};
   MESH.torus=q((a,b)=>[(RB+RT*Math.cos(b))*Math.cos(a),(RB+RT*Math.cos(b))*Math.sin(a),RT*Math.sin(b)],40,18,0,TAU,0,TAU,(a,b)=>[Math.cos(b)*Math.cos(a),Math.cos(b)*Math.sin(a),Math.sin(b)]);
   MESH.sphere=q((a,b)=>[Math.cos(b)*Math.cos(a),Math.cos(b)*Math.sin(a),Math.sin(b)],32,16,0,TAU,-Math.PI/2,Math.PI/2,(a,b)=>[Math.cos(b)*Math.cos(a),Math.cos(b)*Math.sin(a),Math.sin(b)]);
-  MESH.saddle=q((a,rr)=>{const x=rr*Math.cos(a),y=rr*Math.sin(a);return[x,y,.6*(x*x-y*y)]},36,10,0,TAU,0,.97,(a,rr)=>{const x=rr*Math.cos(a),y=rr*Math.sin(a);return n3([-1.2*x,1.2*y,1])});
+  MESH.saddle=q((a,rr)=>{const x=rr*Math.cos(a),y=rr*Math.sin(a);return[x,y,.6*(x*x-y*y)]},40,18,0,TAU,0,1.04,(a,rr)=>{const x=rr*Math.cos(a),y=rr*Math.sin(a);return n3([-1.2*x,1.2*y,1])});
 })();
 const FLATW=3200;
 function ana(p){ // ship position -> point and normal on the 2D analogy
@@ -387,7 +387,7 @@ function drawMap(){
   const P=v=>{const x1=v[0]*cy_-v[1]*sy,y1=v[0]*sy+v[1]*cy_,z1=v[2],up=y1*se+z1*ce,near=-y1*ce+z1*se,k=CAMD/(CAMD-near);return[cx+x1*k*scale,cy-up*k*scale,near]};
   const Rv=v=>{const x1=v[0]*cy_-v[1]*sy,y1=v[0]*sy+v[1]*cy_;return-y1*ce+v[2]*se};
   const L=n3([-.4,-.5,.8]),items=[];
-  if(shape!=='flat')for(const q of MESH[shape]){const pts=q.P.map(P),lt=Math.max(0,q.N[0]*L[0]+q.N[1]*L[1]+q.N[2]*L[2]);items.push({z:pts.reduce((s,p)=>s+p[2],0)/4,kind:'q',pts,lt,face:Rv(q.N)})}
+  if(shape!=='flat')for(const q of MESH[shape]){const pts=q.P.map(P),lt=Math.max(0,q.N[0]*L[0]+q.N[1]*L[1]+q.N[2]*L[2]);items.push({z:pts.reduce((s,p)=>s+p[2],0)/4,kind:'q',pts,lt,face:Rv(q.N),rad:Math.hypot(q.P[0][0]+q.P[2][0],q.P[0][1]+q.P[2][1])/2})}
   const tp=trail.map(({p})=>{const a=ana(p);return P(a.P.map((x,i)=>x+a.N[i]*.05))});
   for(let i=1;i<tp.length;i++){const a=tp[i-1],b=tp[i];if(Math.hypot(a[0]-b[0],a[1]-b[1])>M*.25)continue;items.push({z:(a[2]+b[2])/2+.04,kind:'s',a,b})}
   const addPath=(vs,col)=>{const pp=vs.map(v=>{const a=ana(v);return P(a.P.map((x,i)=>x+a.N[i]*.06))});for(let i=1;i<pp.length;i++){const a=pp[i-1],b=pp[i];if(Math.hypot(a[0]-b[0],a[1]-b[1])>M*.25)continue;items.push({z:(a[2]+b[2])/2+.05,kind:'s',a,b,col})}};
@@ -404,12 +404,12 @@ function drawMap(){
     ctx.globalAlpha=1}
   items.sort((a,b)=>a.z-b.z);
   for(const it of items){
-    if(it.kind==='q'){const l=.25+.75*it.lt,c=shape==='saddle'?[70,52,120]:shape==='torus'?[58,64,130]:[62,52,128];ctx.fillStyle=`rgba(${c.map(x=>Math.round(x*l+20)).join(',')},.82)`;ctx.strokeStyle='rgba(245,241,232,.14)';ctx.lineWidth=.7;ctx.beginPath();it.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke()}
+    if(it.kind==='q'){const l=.25+.75*it.lt,c=shape==='saddle'?[70,52,120]:shape==='torus'?[58,64,130]:[62,52,128];const fa=shape==='saddle'?Math.pow(Math.max(0,Math.min(1,(1.04-it.rad)/.55)),1.6):1;if(fa<=.01)continue;ctx.fillStyle=`rgba(${c.map(x=>Math.round(x*l+20)).join(',')},${(.82*fa).toFixed(3)})`;ctx.strokeStyle=`rgba(245,241,232,${(.14*fa).toFixed(3)})`;ctx.lineWidth=.7;ctx.beginPath();it.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke()}
     else if(it.kind==='d'){ctx.fillStyle=it.col;ctx.beginPath();ctx.arc(it.p[0],it.p[1],4,0,TAU);ctx.fill()}
     else if(it.kind==='s'){ctx.strokeStyle=it.col||'#86dcae';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(it.a[0],it.a[1]);ctx.lineTo(it.b[0],it.b[1]);ctx.stroke()}
     else if(it.kind==='h'){ctx.drawImage(SPR[HOMET],it.p[0]-14,it.p[1]-14,28,28);ctx.fillStyle='#bfe6ff';ctx.fillText('Home',it.p[0],it.p[1]-12)}
     else{const dx=it.to[0]-it.p[0],dy=it.to[1]-it.p[1],a=Math.atan2(dy,dx)+Math.PI/2;ctx.save();ctx.translate(it.p[0],it.p[1]);ctx.rotate(Math.hypot(dx,dy)>1?a:0);ctx.fillStyle='#e6f4ff';ctx.strokeStyle='#7cc8f8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(7,7);ctx.lineTo(0,3);ctx.lineTo(-7,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}}
-  if(shape==='saddle'){ctx.strokeStyle='#ff6a55';ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=72;i++){const a=i/72*TAU,x=.97*Math.cos(a),y=.97*Math.sin(a),p=P([x,y,.6*(x*x-y*y)]);i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])}ctx.stroke()}
+
   ctx.restore();
 }
 
@@ -478,7 +478,7 @@ function measHTML(){let h='';const ang=triAngles();
 
 /* HUD, toast, controls */
 const meas=$('#meas'),hud=$('#hud'),toastEl=$('#toast');let tT=0,hudT=0;
-const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>toastEl.classList.remove('show'),4200)};
+const toast=(m,ms=4200)=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>toastEl.classList.remove('show'),ms)};
 const sizeText=()=>mystery&&!revealed?'???':shape==='flat'?'infinite':shape==='torus'?fmt(Ltor())+' Mly across':shape==='sphere'?fmt(Csph())+' Mly around':'curvature radius '+fmt(Rc())+' Mly';
 const drawHud=()=>{hud.innerHTML=`<div><span>Universe</span><b>${sizeText()}</b></div><div><span>From home</span><b>${fmt(homeDist())} Mly</b></div><div><span>Flown</span><b>${fmt(flown)} Mly</b></div><div><span>Speed</span><b>${fmt(speed)}</b></div>`+(lock?'<div class="lk">Straight-line lock on</div>':'');const m=measHTML();meas.innerHTML=m;meas.hidden=!m};
 const sync=()=>{$('.bar').classList.toggle('mys',mystery);$('#bPath').classList.toggle('on',showPath);$('#sz').value=sizeV;document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.s===shape));$('#bLock').classList.toggle('on',lock);$('#sz').disabled=shape==='flat';$('#szo').textContent=sizeText()};
@@ -499,10 +499,21 @@ function nextShape(){const mode=getOrder(),prev=lsGet('shape-of-space:last');let
     if(!bag.length){bag=SHAPES.slice();for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}if(bag[0]===prev)[bag[0],bag[3]]=[bag[3],bag[0]]}
     pick=bag.shift();lsSet('shape-of-space:bag',JSON.stringify(bag))}
   lsSet('shape-of-space:last',pick);return pick}
-const newMystery=quiet=>{mystery=true;revealed=false;sizeV=Math.floor(Math.random()*101);$('#guess').value='';choose(nextShape());if(quiet!==true)toast('A mystery universe! Use beacons, torpedoes and your eyes to work out its shape.')};
+const newMystery=quiet=>{mystery=true;revealed=false;sizeV=Math.floor(Math.random()*101);resetGuesses();choose(nextShape());if(quiet!==true)toast('A mystery universe! Use beacons, torpedoes and your eyes to work out its shape.')};
 $('#bNew').addEventListener('click',newMystery);
-$('#bCheck').addEventListener('click',()=>{const g=$('#guess').value;if(!g){toast('Pick a shape first.');return}revealed=true;
-  sfx(g===shape?'reveal':'wrong');toast((g===shape?'Correct! ':'Not this time. ')+'It was '+LABEL[shape]+(shape==='flat'?'':', '+sizeText())+'. The minimap is now on.');sync()});
+/* a wrong guess gets a hint, never the answer; that choice is crossed out and they guess again */
+const CURV={flat:0,torus:0,sphere:1,saddle:-1};
+function hintFor(g){const tc=CURV[shape],gc=CURV[g];
+  if(tc===gc)return shape==='torus'?'Not quite, but you have the curvature right. Is space really infinite, though? Lock straight-line flight, fly a long way, and watch for Earth or a landmark appearing again.'
+    :'Not quite, but you have the curvature right. Have you actually seen space wrap around? Fly straight for a long way: do you ever get back home?';
+  if(tc!==0&&gc!==0)return 'Not quite. Look again at whether your triangle adds up to more or less than 180°, and whether the torpedoes drift together or apart.';
+  if(tc!==0)return 'Not quite. Your universe may be larger than your measurements. Small triangles always look close to 180°. Try a much bigger triangle (use warp) and check the decimals, or watch the torpedoes over a longer distance.';
+  return 'Not quite. Check your curvature evidence again: build a big triangle and compare its angle sum with 180°, and watch whether the torpedo separation really changes.'}
+const resetGuesses=()=>{$('#guess').querySelectorAll('option').forEach(o=>{if(o.value){o.disabled=false;o.textContent=o.textContent.replace(/ ✗$/,'')}});$('#guess').value=''};
+$('#bCheck').addEventListener('click',()=>{const sel=$('#guess'),g=sel.value;if(!g){toast('Pick a shape first.');return}
+  if(revealed){toast('You already solved this one. Press New mystery for another universe.');return}
+  if(g===shape){revealed=true;sfx('reveal');toast('Correct! It is '+LABEL[shape]+(shape==='flat'?'':', '+sizeText())+'. The minimap is now on.',7000);sync();return}
+  sfx('wrong');const o=sel.querySelector(`option[value="${g}"]`);o.disabled=true;if(!/ ✗$/.test(o.textContent))o.textContent+=' ✗';sel.value='';toast(hintFor(g),11000)});
 $('#bBeacon').addEventListener('click',dropBeacon);$('#bProbe').addEventListener('click',launchProbes);
 $('#bPath').addEventListener('click',()=>{showPath=!showPath;sync()});$('#bClear').addEventListener('click',clearMeas);
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.s)));
