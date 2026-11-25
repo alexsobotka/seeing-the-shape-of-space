@@ -30,7 +30,7 @@ The torus, sphere and saddle come in a range of sizes. A very large curved unive
 
 ## How a game works
 
-1. Press **Start**. You get a **mystery universe**: a random shape (never the same shape twice in a row) at a random size. Earth, your home, is just ahead of the ship.
+1. Press **Start**. You get a **mystery universe** with its shape hidden, at a random size. By default the shapes come in a random order, and each student sees all four shapes before any shape repeats (see *Order of mystery shapes* below). Earth, your home, is just ahead of the ship.
 2. Explore and measure (see below).
 3. Choose a shape from **Your guess** and press **Check guess**. The answer is revealed, and the minimap appears showing the 2D analogy of your universe (a plane, torus, sphere or saddle) with your path, triangle and torpedo trails on it. Drag the minimap to turn it.
 4. Press **New mystery** for another universe, or click the title to return to the start screen.
@@ -67,7 +67,27 @@ Click the **⚙ gear** button in the top bar and enter the passcode. From there 
 - start a **new mystery universe**;
 - see the **answer** to the current mystery.
 
+- choose the **order of mystery shapes** (below).
+
 Tick **Remember on this device** to skip the passcode next time, and use **Lock settings** to lock it again.
+
+### Order of mystery shapes
+
+| Setting | What students get |
+|---|---|
+| `cycle` (default) | All four shapes once, in a random order, before any shape repeats. Then a new random round begins, never starting with the shape just seen. |
+| `norepeat` | A random shape each time, but never the same shape twice in a row. |
+| `random` | A completely random shape each time. |
+
+Each browser keeps its own place in the order, and it survives reloading the page.
+
+A setting chosen in the ⚙ menu applies only to that computer. To set the order for a whole class, give students a link ending in the setting, for example `https://<your-username>.github.io/<repository-name>/#norepeat`. The ⚙ menu shows the link for the current setting with a **Copy link** button. To change the default for everyone, edit this line in `index.html`:
+
+```js
+const ORDER_DEFAULT='cycle';
+```
+
+### Passcode
 
 **The default passcode is `shape`.** To change it, open `index.html` in a text editor, find this line and replace the text between the quotes:
 

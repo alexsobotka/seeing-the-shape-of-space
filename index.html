@@ -484,7 +484,22 @@ const drawHud=()=>{hud.innerHTML=`<div><span>Universe</span><b>${sizeText()}</b>
 const sync=()=>{$('.bar').classList.toggle('mys',mystery);$('#bPath').classList.toggle('on',showPath);$('#sz').value=sizeV;document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.s===shape));$('#bLock').classList.toggle('on',lock);$('#sz').disabled=shape==='flat';$('#szo').textContent=sizeText()};
 const choose=s=>{shape=s;reset();sync()};
 const SHAPES=['flat','torus','sphere','saddle'],LABEL={flat:'Flat · plane (infinite)',torus:'Flat · torus (finite)',sphere:'Positive · sphere (finite)',saddle:'Negative · saddle (infinite)'};
-const newMystery=quiet=>{mystery=true;revealed=false;sizeV=Math.floor(Math.random()*101);$('#guess').value='';let prev=null;try{prev=localStorage.getItem('shape-of-space:last')}catch(e){}if(!SHAPES.includes(prev))prev=mystery&&revealed===false&&SHAPES.includes(shape)?shape:null;const opts=SHAPES.filter(x=>x!==prev),pick=opts[Math.random()*opts.length|0];try{localStorage.setItem('shape-of-space:last',pick)}catch(e){}choose(pick);if(quiet!==true)toast('A mystery universe! Use beacons, torpedoes and your eyes to work out its shape.')};
+/* ================= order of mystery shapes =================
+   cycle: every shape once (in a random order) before any shape repeats  (default)
+   norepeat: random, but never the same shape twice in a row
+   random: completely random
+   A link ending in #cycle, #norepeat or #random sets the order for everyone who opens it. */
+const ORDER_DEFAULT='cycle',ORDERS=['cycle','norepeat','random'];
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const getOrder=()=>{const h=location.hash.slice(1).toLowerCase();if(ORDERS.includes(h))return h;const v=lsGet('shape-of-space:order');return ORDERS.includes(v)?v:ORDER_DEFAULT};
+function nextShape(){const mode=getOrder(),prev=lsGet('shape-of-space:last');let pick;
+  if(mode==='random')pick=SHAPES[Math.random()*4|0];
+  else if(mode==='norepeat'){const o=SHAPES.filter(x=>x!==prev);pick=o[Math.random()*o.length|0]}
+  else{let bag=[];try{bag=JSON.parse(lsGet('shape-of-space:bag')||'[]').filter(x=>SHAPES.includes(x))}catch(e){}
+    if(!bag.length){bag=SHAPES.slice();for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}if(bag[0]===prev)[bag[0],bag[3]]=[bag[3],bag[0]]}
+    pick=bag.shift();lsSet('shape-of-space:bag',JSON.stringify(bag))}
+  lsSet('shape-of-space:last',pick);return pick}
+const newMystery=quiet=>{mystery=true;revealed=false;sizeV=Math.floor(Math.random()*101);$('#guess').value='';choose(nextShape());if(quiet!==true)toast('A mystery universe! Use beacons, torpedoes and your eyes to work out its shape.')};
 $('#bNew').addEventListener('click',newMystery);
 $('#bCheck').addEventListener('click',()=>{const g=$('#guess').value;if(!g){toast('Pick a shape first.');return}revealed=true;
   sfx(g===shape?'reveal':'wrong');toast((g===shape?'Correct! ':'Not this time. ')+'It was '+LABEL[shape]+(shape==='flat'?'':', '+sizeText())+'. The minimap is now on.');sync()});
@@ -704,14 +719,24 @@ function renderInst(){ibox.innerHTML=`<div class="dhead"><h2>Instructor settings
   <section class="dsec"><h3>Mode</h3><p class="inst-status">${mystery?'Now: mystery mode (what students see)':'Now: explore mode'}</p>
     <p class="note">Explore mode shows the shape buttons, the size slider and the minimap, so you can pick any universe. Mystery mode gives a new random universe with its shape hidden.</p>
     <div class="formrow"><button class="btn" id="iExplore">Explore mode</button><button class="btn ghost" id="iMystery">New mystery universe</button></div></section>
+  <section class="dsec"><h3>Order of mystery shapes</h3>
+    <label class="formrow"><input type="radio" name="ord" value="cycle" ${getOrder()==='cycle'?'checked':''}> Every shape once before any shape repeats</label>
+    <label class="formrow"><input type="radio" name="ord" value="norepeat" ${getOrder()==='norepeat'?'checked':''}> Random, but never the same shape twice in a row</label>
+    <label class="formrow"><input type="radio" name="ord" value="random" ${getOrder()==='random'?'checked':''}> Completely random</label>
+    <p class="note">This changes the order on this device only. To set it for a whole class, share this link:</p>
+    <div class="formrow"><code id="ordLink" style="font-family:var(--mono);font-size:13px;word-break:break-all;flex:1"></code><button class="btn ghost" id="ordCopy">Copy link</button></div><span class="note" id="ordMsg" role="status"></span></section>
   ${mystery?`<section class="dsec"><h3>This mystery's answer</h3><p>${LABEL[shape]}${shape==='flat'?'':', '+(shape==='torus'?fmt(Ltor())+' Mly across':shape==='sphere'?fmt(TAU*Rsph())+' Mly around':'curvature radius '+fmt(Rc())+' Mly')}</p></section>`:''}
   <section class="dsec"><div class="formrow"><button class="btn ghost" id="iLock">Lock settings</button></div></section>`;
   $('#iClose').onclick=closeInst;$('#iExplore').onclick=()=>{mystery=false;revealed=false;sync();closeInst();toast('Explore mode: pick any shape and size.')};
   $('#iMystery').onclick=()=>{newMystery();closeInst()};
+  const link=()=>{$('#ordLink').textContent=location.href.split('#')[0]+'#'+getOrder()};link();
+  ibox.querySelectorAll('input[name=ord]').forEach(r=>r.onchange=()=>{lsSet('shape-of-space:order',r.value);lsSet('shape-of-space:bag','[]');if(ORDERS.includes(location.hash.slice(1).toLowerCase()))history.replaceState(null,'',location.href.split('#')[0]+'#'+r.value);link()});
+  $('#ordCopy').onclick=()=>{navigator.clipboard?.writeText($('#ordLink').textContent).then(()=>{$('#ordMsg').textContent='Copied.'},()=>{$('#ordMsg').textContent='Select the link and copy it.'})};
   $('#iLock').onclick=()=>{try{localStorage.removeItem('shape-of-space:teacher');sessionStorage.removeItem('shape-of-space:teacher')}catch(e){}closeInst();toast('Settings locked.')}}
 $('#gearBtn').addEventListener('click',()=>{idr.hidden=false;teacherOK()?renderInst():renderLock();ibox.focus({preventScroll:true})});
 
-newMystery(true);
+/* behind the start screen: a placeholder universe that does not use up a turn in the shape order */
+mystery=true;revealed=false;sizeV=Math.floor(Math.random()*101);choose(SHAPES[Math.random()*4|0]);
 let last=performance.now();
 const loop=now=>{const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);draw();audioFrame();if(now-hudT>120){hudT=now;drawHud()}requestAnimationFrame(loop)};
 requestAnimationFrame(loop);
